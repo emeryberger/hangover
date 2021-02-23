@@ -1,0 +1,6 @@
+header_a = "1234"
+header_b = "4321"
+header_c = "ABCD"
+
+keyword_malloc="("
+keyword_free=")"
