@@ -6,3 +6,6 @@ fuzzymemory:
 
 fuzz: fuzzymemory
 	afl-fuzz -m 2048 -t 100 -x dictionary/malloc.dict -i afl_in -o afl_out ./fuzzymemory
+
+clean:
+	rm -f fuzzymemory
