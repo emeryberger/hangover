@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #include <unordered_map>
-#include <deque>
+#include <vector>
 
 #include <malloc.h>
 
@@ -32,7 +32,7 @@ private:
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
   // all allocated objects
-  std::deque<void *> allocs;
+  std::vector<void *> allocs;
   
   // the words occupied by all allocated objects
   std::unordered_map<unsigned long, falsy> allocated_words;
