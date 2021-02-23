@@ -1,4 +1,0 @@
-header = "1234"
-
-keyword_malloc="("
-keyword_free=")"
