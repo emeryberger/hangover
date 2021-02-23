@@ -86,7 +86,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
       i++;
       if (allocs.size() > 0) {
 	// ptr = allocs.back();
-	ptr = allocs.front();
+	// Find a random victim to delete.
+	auto victimIndex = rand() % allocs.size();
+	ptr = allocs[victimIndex]; // .front();
 	// Drop "double frees"
 	if (!freed[ptr]) {
 	  printf("FREE %p\n", ptr);
@@ -107,9 +109,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
 	  ::free(ptr);
 	  sizes[ptr] = 0;
 	  freed[ptr] = true;
+	  // allocs.pop_back();
+	  allocs.erase(allocs.begin() + victimIndex); // pop_front();
 	}
-	// allocs.pop_back();
-	allocs.pop_front();
       }
       break;
     default:
