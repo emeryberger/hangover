@@ -46,6 +46,9 @@ std::unordered_map<void *, size_t> sizes;
 void simulateMalloc() {
   // Random size up to MAX_SIZE bytes.
   size_t sz = rand() % MAX_SIZE;
+  if (sz == 0) {
+    sz = 8;
+  }
   void * ptr = ::malloc(sz);
   sizes[ptr] = sz;
   // Check alignment.
@@ -65,90 +68,100 @@ void simulateMalloc() {
 }
 
 void simulateFree() {
-  if (allocs.size() > 0) {
-    // ptr = allocs.back();
-    // Find a random victim to delete.
-    auto victimIndex = rand() % allocs.size();
-    auto ptr = allocs[victimIndex]; // .front();
-    // Drop "double frees"
-    printf("FREE %p\n", ptr);
-    // Ensure size reported matches size requested.
-    auto sz = sizes[ptr];
-    assert(malloc_usable_size(ptr) >= sz);
-    // Check for the known value.
-    for (auto ind = 0; ind < sz; ind++) {
-      auto v = ('M' + ind + (uintptr_t) ptr) % 256;
-      //	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
-      assert(((char *) ptr)[ind] == v);
-      // Fill with garbage
-      ((char *) ptr)[ind] = rand() % 256;
-    }
-    // Mark the words as no longer allocated.
-    for (auto ind = 0; ind < sz ; ind++) {
-      // printf("is %d allocated? should be.\n", ind);
-      assert(allocated_bytes[ind + (uintptr_t) ptr ]);
-      allocated_bytes[ind + (uintptr_t) ptr ] = false;
-    }
-    ::free(ptr);
-    sizes[ptr] = 0;
-    // allocs.pop_back();
-    allocs.erase(allocs.begin() + victimIndex); // pop_front();
+  if (allocs.size() == 0) {
+    return;
   }
+  // Find a random victim to delete.
+  auto victimIndex = rand() % allocs.size();
+  auto ptr = allocs[victimIndex]; // .front();
+  printf("FREE %p\n", ptr);
+  // Ensure size reported matches size requested.
+  auto sz = sizes[ptr];
+  assert(malloc_usable_size(ptr) >= sz);
+  // Check for the known value.
+  for (auto ind = 0; ind < sz; ind++) {
+    auto v = ('M' + ind + (uintptr_t) ptr) % 256;
+    //	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
+    assert(((char *) ptr)[ind] == v);
+    // Fill with garbage
+    ((char *) ptr)[ind] = rand() % 256;
+  }
+  // Mark the bytes as no longer allocated.
+  for (auto ind = 0; ind < sz ; ind++) {
+    // printf("is %d allocated? should be.\n", ind);
+    assert(allocated_bytes[ind + (uintptr_t) ptr ]);
+    allocated_bytes[ind + (uintptr_t) ptr ] = false;
+  }
+  sizes[ptr] = 0;
+  // allocs.pop_back();
+  allocs.erase(allocs.begin() + victimIndex); // pop_front();
+  ::free(ptr);
 }
 
 void simulateRealloc()
 {
-      
-  if (allocs.size() > 0) {
-    // Find a random victim to realloc.
-    auto victimIndex = rand() % allocs.size();
-    auto ptr = allocs[victimIndex];
-    // Ensure size reported matches size requested.
-    auto sz = sizes[ptr];
-    assert(malloc_usable_size(ptr) >= sz);
-    // Allocate the new chunk.
-    auto newSize = rand() % MAX_SIZE;
-    auto newPtr = ::realloc(ptr, newSize);
-    // Check AND reset the known value.
-    auto minSize = ((sz < newSize) ? sz : newSize);
-    for (auto ind = 0; ind < minSize; ind++) {
-      //printf("accessing ind %d\n", ind);
-      assert(((char *) newPtr)[ind] == ('M' + ind + (uintptr_t) ptr) % 256);
-      ((char *) newPtr)[ind] = ('M' + ind + (uintptr_t) newPtr) % 256;
-    }
-    for (auto ind = minSize; ind < newSize; ind++) {
-      auto v = ('M' + ind + (uintptr_t) newPtr) % 256;
-      //	  printf("writing %d into ind %d\n", v, ind);
-      ((char *) newPtr)[ind] = v;
-    }
-#if 0
-    if (newPtr != ptr) {
-      // Fill the old area with garbage
-      for (auto ind = 0; ind < sz; ind++) {
-	((char *) ptr)[ind] = rand() % 256;
-      }
-      for (auto ind = 0; ind < sz ; ind++) {
-	assert(allocated_bytes[ind + (uintptr_t) ptr ]);
-	allocated_bytes[ind + (uintptr_t) ptr ] = false;
-      }
-    }
-#endif
+  if (allocs.size() == 0) {
+    return;
+  }
+  // Find a random victim to realloc.
+  auto victimIndex = rand() % allocs.size();
+  auto ptr = allocs[victimIndex];
+  // Ensure size reported matches size requested.
+  auto sz = sizes[ptr];
+  assert(sz != 0); // can't be freed already
+  assert(malloc_usable_size(ptr) >= sz); // sizes must be in sync
+  // Allocate the new chunk.
+  auto newSize = rand() % MAX_SIZE;
+  if (newSize == 0) {
+    // It's a free. Mark as deallocated.
     for (auto ind = 0; ind < sz; ind++) {
       allocated_bytes[ind + (uintptr_t) ptr ] = false;
     }
-    for (auto ind = 0; ind < newSize ; ind++) {
-      allocated_bytes[ind + (uintptr_t) newPtr ] = true;
-    }
-    printf("REALLOC %lu -> %lu (%p -> %p)\n", sz, newSize, ptr, newPtr);
-    sizes[newPtr] = newSize;
-    // allocs.pop_back();
-    if (ptr != newPtr) {
-      sizes[ptr] = 0;
-      allocs.erase(allocs.begin() + victimIndex); // pop_front();
-    }
-    allocs.push_back(newPtr);	
+    allocs.erase(allocs.begin() + victimIndex);
+    sizes[ptr] = 0;
+    return;
   }
-  
+  assert(ptr != nullptr);
+  assert(newSize != 0);
+  auto newPtr = ::realloc(ptr, newSize);
+  // Check AND reset the known value.
+  auto minSize = ((sz < newSize) ? sz : newSize);
+  for (auto ind = 0; ind < minSize; ind++) {
+    //printf("accessing ind %d\n", ind);
+    assert(((char *) newPtr)[ind] == ('M' + ind + (uintptr_t) ptr) % 256);
+    ((char *) newPtr)[ind] = ('M' + ind + (uintptr_t) newPtr) % 256;
+  }
+  for (auto ind = minSize; ind < newSize; ind++) {
+    auto v = ('M' + ind + (uintptr_t) newPtr) % 256;
+    //	  printf("writing %d into ind %d\n", v, ind);
+    ((char *) newPtr)[ind] = v;
+  }
+#if 0
+  if (newPtr != ptr) {
+    // Fill the old area with garbage
+    for (auto ind = 0; ind < sz; ind++) {
+      ((char *) ptr)[ind] = rand() % 256;
+    }
+    for (auto ind = 0; ind < sz ; ind++) {
+      assert(allocated_bytes[ind + (uintptr_t) ptr ]);
+      allocated_bytes[ind + (uintptr_t) ptr ] = false;
+    }
+  }
+#endif
+  for (auto ind = 0; ind < sz; ind++) {
+    allocated_bytes[ind + (uintptr_t) ptr ] = false;
+  }
+  for (auto ind = 0; ind < newSize ; ind++) {
+    allocated_bytes[ind + (uintptr_t) newPtr ] = true;
+  }
+  printf("REALLOC %lu -> %lu (%p -> %p)\n", sz, newSize, ptr, newPtr);
+  sizes[newPtr] = newSize;
+  // allocs.pop_back();
+  if (ptr != newPtr) {
+    sizes[ptr] = 0;
+    allocs.erase(allocs.begin() + victimIndex); // pop_front();
+    allocs.push_back(newPtr);
+  }
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
