@@ -43,6 +43,12 @@ std::unordered_map<unsigned long, falsy> allocated_bytes;
 std::unordered_map<void *, size_t> sizes;
 
 
+#if 0
+#define DEBUG_PRINT 1
+#else
+#define DEBUG_PRINT 0
+#endif
+
 void simulateMalloc() {
   // Random size up to MAX_SIZE bytes.
   size_t sz = rand() % MAX_SIZE;
@@ -59,7 +65,9 @@ void simulateMalloc() {
     assert(!allocated_bytes[ind + (uintptr_t) ptr]);
     allocated_bytes[ind + (uintptr_t) ptr] = true;
   }
+#if DEBUG_PRINT
   printf("MALLOC %ld = %p\n", sz, ptr);
+#endif
   allocs.push_back(ptr);
   // Fill with a known value.
   for (auto ind = 0; ind < sz; ind++) {
@@ -75,7 +83,9 @@ void simulateFree() {
   // Find a random victim to delete.
   auto victimIndex = rand() % allocs.size();
   auto ptr = allocs[victimIndex]; // .front();
+#if DEBUG_PRINT
   printf("FREE %p\n", ptr);
+#endif
   // Ensure size reported matches size requested.
   auto sz = sizes[ptr];
   assert(malloc_usable_size(ptr) >= sz);
@@ -156,7 +166,9 @@ void simulateRealloc()
   for (auto ind = 0; ind < newSize ; ind++) {
     allocated_bytes[ind + (uintptr_t) newPtr ] = true;
   }
+#if DEBUG_PRINT
   printf("REALLOC %lu -> %lu (%p -> %p)\n", sz, newSize, ptr, newPtr);
+#endif
   sizes[newPtr] = newSize;
   // allocs.pop_back();
   if (ptr != newPtr) {
@@ -173,7 +185,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
   int i = 0;
   void * ptr;
   if (size < 4) {
-    return 0;
+    return -1;
   }
   for (auto ind = 0; ind < 4; ind++) {
     char ch = ((char *) Data)[ind];
