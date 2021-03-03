@@ -69,6 +69,7 @@ void simulateMalloc() {
 
 void simulateFree() {
   if (allocs.size() == 0) {
+    exit(-1);
     return;
   }
   // Find a random victim to delete.
@@ -101,6 +102,7 @@ void simulateFree() {
 void simulateRealloc()
 {
   if (allocs.size() == 0) {
+    exit(-1);
     return;
   }
   // Find a random victim to realloc.
@@ -179,7 +181,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
     case 'M':
     case 'F':
     case 'R':
-      return 0;
+      return -1;
     default:
       break;
     }
@@ -206,8 +208,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
       simulateRealloc();
       break;
     default:
-      // Parse failed, skip to the next character.
+      // Parse failed.
       i++;
+      return -1;
       break;
     }
   }
