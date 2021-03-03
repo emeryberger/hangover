@@ -1,6 +1,10 @@
 header_a = "1234"
 header_b = "4321"
 header_c = "ABCD"
+header_d = "EFGH"
+header_e = "IJKL"
+header_f = "abcd"
 
-keyword_malloc="("
-keyword_free=")"
+keyword_malloc="M"
+keyword_free="F"
+keyword_realloc="R"
