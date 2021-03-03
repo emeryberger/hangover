@@ -13,22 +13,6 @@
    fuzzymemory: a fuzzer for malloc implementations.
  */
 
-// A default-false boolean
-class falsy {
-public:
-  falsy()
-    : _val (false)
-  {}
-  operator bool&() {
-    return _val;
-  }
-  falsy& operator=(bool v) {
-    _val = v;
-    return *this;
-  }
-private:
-  bool _val;
-};
 
 // maximum size of allocated objects
 constexpr size_t MAX_SIZE = 256;
@@ -37,7 +21,7 @@ constexpr size_t MAX_SIZE = 256;
 std::vector<void *> allocs;
 
 // the words occupied by all allocated objects
-std::unordered_map<unsigned long, falsy> allocated_bytes;
+std::unordered_map<unsigned long, bool> allocated_bytes;
 
 // the sizes of all allocated objects (0 if freed)
 std::unordered_map<void *, size_t> sizes;
@@ -78,7 +62,6 @@ void simulateMalloc() {
 void simulateFree() {
   if (allocs.size() == 0) {
     exit(-1);
-    return;
   }
   // Find a random victim to delete.
   auto victimIndex = rand() % allocs.size();
@@ -92,7 +75,7 @@ void simulateFree() {
   // Check for the known value.
   for (auto ind = 0; ind < sz; ind++) {
     auto v = ('M' + ind + (uintptr_t) ptr) % 256;
-    //	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
+    	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
     assert(((char *) ptr)[ind] == v);
     // Fill with garbage
     ((char *) ptr)[ind] = rand() % 256;
@@ -113,7 +96,6 @@ void simulateRealloc()
 {
   if (allocs.size() == 0) {
     exit(-1);
-    return;
   }
   // Find a random victim to realloc.
   auto victimIndex = rand() % allocs.size();
@@ -148,20 +130,13 @@ void simulateRealloc()
     //	  printf("writing %d into ind %d\n", v, ind);
     ((char *) newPtr)[ind] = v;
   }
-#if 0
-  if (newPtr != ptr) {
-    // Fill the old area with garbage
-    for (auto ind = 0; ind < sz; ind++) {
-      ((char *) ptr)[ind] = rand() % 256;
-    }
-    for (auto ind = 0; ind < sz ; ind++) {
-      assert(allocated_bytes[ind + (uintptr_t) ptr ]);
-      allocated_bytes[ind + (uintptr_t) ptr ] = false;
-    }
-  }
-#endif
   for (auto ind = 0; ind < sz; ind++) {
     allocated_bytes[ind + (uintptr_t) ptr ] = false;
+#if 0 // also undefined, since freed
+    if (ptr != newPtr) {
+      ((char *) ptr)[ind] = rand() % 256;
+    }
+#endif
   }
   for (auto ind = 0; ind < newSize ; ind++) {
     allocated_bytes[ind + (uintptr_t) newPtr ] = true;
@@ -200,6 +175,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
   }
   uint32_t seed = *((uint32_t *) Data);
   i += 4;
+  printf("seed = %u\n", seed);
   srand(seed);
 
   // Parse the string, invoking malloc and free as appropriate, with
