@@ -133,6 +133,9 @@ void simulateRealloc()
       }
     }
 #endif
+    for (auto ind = 0; ind < sz; ind++) {
+      allocated_bytes[ind + (uintptr_t) ptr ] = false;
+    }
     for (auto ind = 0; ind < newSize ; ind++) {
       allocated_bytes[ind + (uintptr_t) newPtr ] = true;
     }
