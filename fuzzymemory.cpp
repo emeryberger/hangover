@@ -42,7 +42,9 @@ void simulateMalloc() {
   void * ptr = ::malloc(sz);
   sizes[ptr] = sz;
   // Check alignment.
-  assert((uintptr_t) ptr % alignof(max_align_t) == 0);
+  if (sz >= alignof(max_align_t)) {
+    assert((uintptr_t) ptr % alignof(max_align_t) == 0);
+  }
   // Make sure we aren't overlapping with any previous malloc'd
   // regions.
   for (auto ind = 0; ind < sz; ind++) {
@@ -75,7 +77,7 @@ void simulateFree() {
   // Check for the known value.
   for (auto ind = 0; ind < sz; ind++) {
     auto v = ('M' + ind + (uintptr_t) ptr) % 256;
-    	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
+    //    	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
     assert(((char *) ptr)[ind] == v);
     // Fill with garbage
     ((char *) ptr)[ind] = rand() % 256;
