@@ -26,6 +26,12 @@ std::unordered_map<unsigned long, bool> allocated_bytes;
 // the sizes of all allocated objects (0 if freed)
 std::unordered_map<void *, size_t> sizes;
 
+#if 0
+#define EXERCISE_UNDEFINED_BEHAVIOR 1
+#else
+#define EXERCISE_UNDEFINED_BEHAVIOR 0
+#endif
+
 
 #if 0
 #define DEBUG_PRINT 1
@@ -73,6 +79,7 @@ void simulateFree() {
 #endif
   // Ensure size reported matches size requested.
   auto sz = sizes[ptr];
+  printf("sz = %d, malloc_usable_size = %d\n", sz, malloc_usable_size(ptr));
   assert(malloc_usable_size(ptr) >= sz);
   // Check for the known value.
   for (auto ind = 0; ind < sz; ind++) {
@@ -92,6 +99,12 @@ void simulateFree() {
   // allocs.pop_back();
   allocs.erase(allocs.begin() + victimIndex); // pop_front();
   ::free(ptr);
+#if EXERCISE_UNDEFINED_BEHAVIOR
+  for (auto ind = 0; ind < sz; ind++) {
+    // Fill with garbage
+    ((char *) ptr)[ind] = rand() % 256;
+  }
+#endif
 }
 
 void simulateRealloc()
@@ -134,7 +147,8 @@ void simulateRealloc()
   }
   for (auto ind = 0; ind < sz; ind++) {
     allocated_bytes[ind + (uintptr_t) ptr ] = false;
-#if 0 // also undefined, since freed
+#if EXERCISE_UNDEFINED_BEHAVIOR
+    // Overwrite with garbage (note: it's already been freed, so this is undefined).
     if (ptr != newPtr) {
       ((char *) ptr)[ind] = rand() % 256;
     }
@@ -150,7 +164,7 @@ void simulateRealloc()
   // allocs.pop_back();
   if (ptr != newPtr) {
     sizes[ptr] = 0;
-    allocs.erase(allocs.begin() + victimIndex); // pop_front();
+    allocs.erase(allocs.begin() + victimIndex);
     allocs.push_back(newPtr);
   }
 }
