@@ -1,6 +1,6 @@
-# fuzzymemory
+# HangOver
 
-Basic fuzzing for `malloc()`. Linux only for now. Relies on AFL.
+Basic fuzzing for `malloc()` (hangovers lead to fuzzy memories...). Linux only for now. Relies on AFL.
 
 ## building
 
