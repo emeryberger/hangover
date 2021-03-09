@@ -10,7 +10,7 @@
 #include <malloc.h>
 
 /**
-   fuzzymemory: a fuzzer for malloc implementations.
+   HangOver: a memory fuzzer for malloc implementations.
  */
 
 
@@ -26,7 +26,7 @@ std::unordered_map<unsigned long, bool> allocated_bytes;
 // the sizes of all allocated objects (0 if freed)
 std::unordered_map<void *, size_t> sizes;
 
-#if 0
+#if 1
 #define EXERCISE_UNDEFINED_BEHAVIOR 1
 #else
 #define EXERCISE_UNDEFINED_BEHAVIOR 0
