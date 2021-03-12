@@ -9,6 +9,12 @@
 
 #include <malloc.h>
 
+#ifndef HANGOVER_MALLOC
+#define HANGOVER_MALLOC(x) ::malloc(x)
+#define HANGOVER_FREE(x) ::free(x)
+#define HANGOVER_REALLOC(x, s) ::realloc(x, s)
+#endif
+
 /**
    HangOver: a memory fuzzer for malloc implementations.
  */
@@ -45,7 +51,7 @@ void simulateMalloc() {
   if (sz == 0) {
     sz = 8;
   }
-  void * ptr = ::malloc(sz);
+  void * ptr = HANGOVER_MALLOC(sz);
   sizes[ptr] = sz;
   // Check alignment.
   if (sz >= alignof(max_align_t)) {
@@ -98,7 +104,7 @@ void simulateFree() {
   sizes[ptr] = 0;
   // allocs.pop_back();
   allocs.erase(allocs.begin() + victimIndex); // pop_front();
-  ::free(ptr);
+  HANGOVER_FREE(ptr);
 #if EXERCISE_UNDEFINED_BEHAVIOR
   for (auto ind = 0; ind < sz; ind++) {
     // Fill with garbage
@@ -132,7 +138,7 @@ void simulateRealloc()
   }
   assert(ptr != nullptr);
   assert(newSize != 0);
-  auto newPtr = ::realloc(ptr, newSize);
+  auto newPtr = HANGOVER_REALLOC(ptr, newSize);
   // Check AND reset the known value.
   auto minSize = ((sz < newSize) ? sz : newSize);
   for (auto ind = 0; ind < minSize; ind++) {
