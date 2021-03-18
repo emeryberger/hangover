@@ -32,7 +32,7 @@ std::unordered_map<unsigned long, bool> allocated_bytes;
 // the sizes of all allocated objects (0 if freed)
 std::unordered_map<void *, size_t> sizes;
 
-#if 1
+#if 0
 #define EXERCISE_UNDEFINED_BEHAVIOR 1
 #else
 #define EXERCISE_UNDEFINED_BEHAVIOR 0
