@@ -52,6 +52,8 @@ void simulateMalloc() {
     sz = 8;
   }
   void * ptr = HANGOVER_MALLOC(sz);
+  // We do not expect memory exhaustion during fuzzing, though it is of course legal!
+  assert(ptr);
   sizes[ptr] = sz;
   // Check alignment.
   if (sz >= alignof(max_align_t)) {
