@@ -17,7 +17,7 @@ main()
   }
   std::uniform_int_distribution<int> action_dist(0, 2);
   char arr[] = { 'M', 'F', 'R' };
-  for (int i = 0; i < 1000; i++) {
+  for (int i = 0; i < 65536; i++) {
     std::cout << arr[action_dist(e1)];
   }
   return 0;

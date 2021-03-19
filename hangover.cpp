@@ -21,7 +21,7 @@
 
 
 // maximum size of allocated objects
-constexpr size_t MAX_SIZE = 256;
+constexpr size_t MAX_SIZE = 2048; // 256;
 
 // all allocated objects
 std::vector<void *> allocs;
@@ -87,7 +87,7 @@ void simulateFree() {
 #endif
   // Ensure size reported matches size requested.
   auto sz = sizes[ptr];
-  printf("sz = %d, malloc_usable_size = %d\n", sz, malloc_usable_size(ptr));
+  printf("sz = %lu, malloc_usable_size = %lu\n", sz, malloc_usable_size(ptr));
   assert(malloc_usable_size(ptr) >= sz);
   // Check for the known value.
   for (auto ind = 0; ind < sz; ind++) {
@@ -231,9 +231,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
   
 int main()
 {
-  char data[4096];
-  memset(data, 0, 4096);
-  auto result = fread(data, 4096, 1, stdin);
+  constexpr int MAX_INPUT_LENGTH = 65536;
+  char data[MAX_INPUT_LENGTH];
+  memset(data, 0, MAX_INPUT_LENGTH);
+  auto result = fread(data, MAX_INPUT_LENGTH, 1, stdin);
   if (result == 0) {
     LLVMFuzzerTestOneInput((const uint8_t *) data, strlen(data));
   }
