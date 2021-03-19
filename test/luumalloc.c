@@ -1,6 +1,7 @@
 // From https://danluu.com/malloc-tutorial/
 
 #include <assert.h>
+#include <stddef.h> // HangOver: for alignment
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -10,6 +11,8 @@ struct block_meta {
   struct block_meta *next;
   int free;
   int magic; // For debugging only. TODO: remove this in non-debug mode.
+  // HangOver: alignment
+  double _dummy;
 };
 
 #define META_SIZE sizeof(struct block_meta)
@@ -34,15 +37,19 @@ struct block_meta *request_space(struct block_meta* last, size_t size) {
     return NULL; // sbrk failed.
   }
 
+  // HangOver - align the block.
+  struct block_meta * orig_block = block;
+  block = (struct block_meta *) (((unsigned long) block + _Alignof(max_align_t) - 1) & ~(_Alignof(max_align_t) - 1));
   if (last) { // NULL on first request.
     last->next = block;
   }
-  block->size = size;
+  block->size = size - ((unsigned long) block - (unsigned long) orig_block); // HangOver
   block->next = NULL;
   block->free = 0;
   block->magic = 0x12345678;
   return block;
 }
+
 
 void *malloc(size_t size) {
   struct block_meta *block;
@@ -52,6 +59,12 @@ void *malloc(size_t size) {
     return NULL;
   }
 
+  // HangOver: align the size
+  if (size < 0) {
+    size = 1;
+  }
+  size = (size + _Alignof(max_align_t) - 1) & ~(_Alignof(max_align_t) - 1);
+  
   if (!global_base) { // First call.
     block = request_space(NULL, size);
     if (!block) {
@@ -78,6 +91,12 @@ void *malloc(size_t size) {
 
 struct block_meta *get_block_ptr(void *ptr) {
   return (struct block_meta*)ptr - 1;
+}
+
+// HangOver
+size_t malloc_usable_size(void * ptr) {
+  struct block_meta* block_ptr = get_block_ptr(ptr);
+  return block_ptr->size;
 }
 
 void free(void *ptr) {
