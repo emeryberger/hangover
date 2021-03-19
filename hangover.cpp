@@ -13,6 +13,7 @@
 #define HANGOVER_MALLOC(x) ::malloc(x)
 #define HANGOVER_FREE(x) ::free(x)
 #define HANGOVER_REALLOC(x, s) ::realloc(x, s)
+#define HANGOVER_MALLOC_USABLE_SIZE(x) ::malloc_usable_size(x)
 #endif
 
 /**
@@ -39,7 +40,7 @@ std::unordered_map<void *, size_t> sizes;
 #endif
 
 
-#if 0
+#if 1
 #define DEBUG_PRINT 1
 #else
 #define DEBUG_PRINT 0
@@ -66,13 +67,16 @@ void simulateMalloc() {
     allocated_bytes[ind + (uintptr_t) ptr] = true;
   }
 #if DEBUG_PRINT
-  printf("MALLOC %ld = %p\n", sz, ptr);
+  printf("MALLOC %ld = %p (recorded size = %ld)\n", sz, ptr, HANGOVER_MALLOC_USABLE_SIZE(ptr));
 #endif
   allocs.push_back(ptr);
   // Fill with a known value.
+#if 0
   for (auto ind = 0; ind < sz; ind++) {
     ((char *) ptr)[ind] = ('M' + ind + (uintptr_t) ptr) % 256;
   }
+#endif
+  memset(ptr, ((uintptr_t) ptr + 'M') % 256, sz);
 }
 
 void simulateFree() {
@@ -87,16 +91,18 @@ void simulateFree() {
 #endif
   // Ensure size reported matches size requested.
   auto sz = sizes[ptr];
-  printf("sz = %lu, malloc_usable_size = %lu\n", sz, malloc_usable_size(ptr));
-  assert(malloc_usable_size(ptr) >= sz);
+  printf("sz = %lu, malloc_usable_size = %lu\n", sz, HANGOVER_MALLOC_USABLE_SIZE(ptr));
+  assert(HANGOVER_MALLOC_USABLE_SIZE(ptr) >= sz);
   // Check for the known value.
+  auto v = ('M' + (uintptr_t) ptr) % 256;
   for (auto ind = 0; ind < sz; ind++) {
-    auto v = ('M' + ind + (uintptr_t) ptr) % 256;
+    //    auto v = ('M' + ind + (uintptr_t) ptr) % 256;
     //    	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
     assert(((char *) ptr)[ind] == v);
-    // Fill with garbage
-    ((char *) ptr)[ind] = rand() % 256;
   }
+  // Fill with garbage
+  //  previously was inside loop:   ((char *) ptr)[ind] = rand() % 256;
+  memset(ptr, rand() % 256, sz);
   // Mark the bytes as no longer allocated.
   for (auto ind = 0; ind < sz ; ind++) {
     // printf("is %d allocated? should be.\n", ind);
@@ -126,7 +132,7 @@ void simulateRealloc()
   // Ensure size reported matches size requested.
   auto sz = sizes[ptr];
   assert(sz != 0); // can't be freed already
-  assert(malloc_usable_size(ptr) >= sz); // sizes must be in sync
+  assert(HANGOVER_MALLOC_USABLE_SIZE(ptr) >= sz); // sizes must be in sync
   // Allocate the new chunk.
   auto newSize = rand() % MAX_SIZE;
   if (newSize == 0) {
@@ -143,15 +149,16 @@ void simulateRealloc()
   auto newPtr = HANGOVER_REALLOC(ptr, newSize);
   // Check AND reset the known value.
   auto minSize = ((sz < newSize) ? sz : newSize);
+  auto v = ('M' + (uintptr_t) ptr) % 256;  
+  auto new_v = ('M' + (uintptr_t) newPtr) % 256;
   for (auto ind = 0; ind < minSize; ind++) {
     //printf("accessing ind %d\n", ind);
-    assert(((char *) newPtr)[ind] == ('M' + ind + (uintptr_t) ptr) % 256);
-    ((char *) newPtr)[ind] = ('M' + ind + (uintptr_t) newPtr) % 256;
+    assert(((char *) newPtr)[ind] == v);
+    ((char *) newPtr)[ind] = new_v;
   }
   for (auto ind = minSize; ind < newSize; ind++) {
-    auto v = ('M' + ind + (uintptr_t) newPtr) % 256;
     //	  printf("writing %d into ind %d\n", v, ind);
-    ((char *) newPtr)[ind] = v;
+    ((char *) newPtr)[ind] = new_v;
   }
   for (auto ind = 0; ind < sz; ind++) {
     allocated_bytes[ind + (uintptr_t) ptr ] = false;
