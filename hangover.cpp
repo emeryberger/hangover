@@ -12,8 +12,9 @@
 #ifndef HANGOVER_MALLOC
 #define HANGOVER_MALLOC(x) ::malloc(x)
 #define HANGOVER_FREE(x) ::free(x)
-#define HANGOVER_REALLOC(x, s) ::realloc(x, s)
+#define HANGOVER_REALLOC(x,s) ::realloc(x,s)
 #define HANGOVER_MALLOC_USABLE_SIZE(x) ::malloc_usable_size(x)
+#define HANGOVER_MEMALIGN(a,s) ::memalign(a,s)
 #endif
 
 /**
@@ -23,6 +24,8 @@
 
 // maximum size of allocated objects
 constexpr size_t MAX_SIZE = 2048; // 256;
+// log2 of the above
+constexpr size_t LOG2_MAX_SIZE = 11; // FIXME, should be computed
 
 // all allocated objects
 std::vector<void *> allocs;
@@ -46,15 +49,11 @@ std::unordered_map<void *, size_t> sizes;
 #define DEBUG_PRINT 0
 #endif
 
-void simulateMalloc() {
-  // Random size up to MAX_SIZE bytes.
-  size_t sz = rand() % MAX_SIZE;
-  if (sz == 0) {
-    sz = 8;
+void markAllocated(void * ptr, size_t sz) {
+  if (malloc_usable_size(ptr) < sz) {
+    printf("recorded size = %lu, requested size = %lu\n", malloc_usable_size(ptr), sz);
   }
-  void * ptr = HANGOVER_MALLOC(sz);
-  // We do not expect memory exhaustion during fuzzing, though it is of course legal!
-  assert(ptr);
+  assert(malloc_usable_size(ptr) >= sz);
   sizes[ptr] = sz;
   // Check alignment.
   if (sz >= alignof(max_align_t)) {
@@ -66,9 +65,6 @@ void simulateMalloc() {
     assert(!allocated_bytes[ind + (uintptr_t) ptr]);
     allocated_bytes[ind + (uintptr_t) ptr] = true;
   }
-#if DEBUG_PRINT
-  printf("MALLOC %ld = %p (recorded size = %ld)\n", sz, ptr, HANGOVER_MALLOC_USABLE_SIZE(ptr));
-#endif
   allocs.push_back(ptr);
   // Fill with a known value.
 #if 0
@@ -77,6 +73,42 @@ void simulateMalloc() {
   }
 #endif
   memset(ptr, ((uintptr_t) ptr + 'M') % 256, sz);
+}
+
+void simulateMemalign() {
+  // Random size up to MAX_SIZE bytes.
+  size_t sz = rand() % MAX_SIZE;
+  if (sz == 0) {
+    sz = 8;
+  }
+  // Random alignment (always a power of two).
+  size_t alignment = (1 << (rand() % LOG2_MAX_SIZE));
+  if (alignment < alignof(max_align_t)) {
+    alignment = alignof(max_align_t);
+  }
+  auto ptr = HANGOVER_MEMALIGN(alignment, sz);
+  assert(ptr);
+  assert((uintptr_t) ptr % alignment == 0);
+  markAllocated(ptr, sz);
+#if DEBUG_PRINT
+  printf("MEMALIGN %ld (alignment: %ld) = %p (recorded size = %ld)\n", sz, alignment, ptr, HANGOVER_MALLOC_USABLE_SIZE(ptr));
+#endif
+}
+
+
+void simulateMalloc() {
+  // Random size up to MAX_SIZE bytes.
+  size_t sz = rand() % MAX_SIZE;
+  if (sz == 0) {
+    sz = 8;
+  }
+  void * ptr = HANGOVER_MALLOC(sz);
+  // We do not expect memory exhaustion during fuzzing, though it is of course legal!
+  assert(ptr);
+  markAllocated(ptr, sz);
+#if DEBUG_PRINT
+  printf("MALLOC %ld = %p (recorded size = %ld)\n", sz, ptr, HANGOVER_MALLOC_USABLE_SIZE(ptr));
+#endif
 }
 
 void simulateFree() {
@@ -132,6 +164,7 @@ void simulateRealloc()
   // Ensure size reported matches size requested.
   auto sz = sizes[ptr];
   assert(sz != 0); // can't be freed already
+  //  printf("ptr = %p, sz = %ld\n", ptr, sz);
   assert(HANGOVER_MALLOC_USABLE_SIZE(ptr) >= sz); // sizes must be in sync
   // Allocate the new chunk.
   auto newSize = rand() % MAX_SIZE;
@@ -225,6 +258,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t * Data, size_t size) {
     case 'R': // realloc
       i++;
       simulateRealloc();
+      break;
+    case 'A': // memalign
+      i++;
+      simulateMemalign();
       break;
     default:
       // Parse failed.
