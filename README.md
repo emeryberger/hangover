@@ -28,4 +28,4 @@ HangOver checks every allocated object for correct alignment. It also ensures th
 
 So far, we have been using HangOver during allocator development and testing.
 
-Anecdotally, we have demonstrated HangOver's effectiveness by identifying and resolving problems in a `malloc` implementation described in [this tutorial by Dan Luu](https://danluu.com/malloc-tutorial/) (code in the `test` directory).
+Anecdotally, we have demonstrated HangOver's effectiveness by identifying problems in a `malloc` implementation described in [this tutorial by Dan Luu](https://danluu.com/malloc-tutorial/) (code in the `test` directory).
