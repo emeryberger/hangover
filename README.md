@@ -25,3 +25,7 @@ HangOver interprets the first four bytes as the seed of a pseudo-random number g
 * **A** = `memalign` a randomly-sized object aligned to a randomly chosen power of two
 
 HangOver checks every allocated object for correct alignment. It also ensures that allocated objects are unique and non-overlapping. By design, HangOver should never crash when running a correctly-implemented and standards-compliant allocator.
+
+So far, we have been using HangOver during allocator development and testing.
+
+Anecdotally, we have demonstrated HangOver's effectiveness by identifying and resolving problems in a `malloc` implementation described in [this tutorial by Dan Luu](https://danluu.com/malloc-tutorial/) (code in the `test` directory).
