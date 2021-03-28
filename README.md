@@ -20,7 +20,7 @@ Here's an example legal input: `1234MMMFFFMFAMMMFFFFFF`.
 HangOver interprets the first four bytes as the seed of a pseudo-random number generator, making crashing inputs deterministically reproducible (HangOver currently is single-threaded only). The rest of the stream consists of a sequence containing the following characters:
 
 * **M** = `malloc` a randomly-sized object (based on the PRNG initialized above), fill with known characters, and mark as allocated
-* **F** =`free` a victim chosen randomly from among all currently allocated objects, mark as deallocated
+* **F** = `free` a victim chosen randomly from among all currently allocated objects, mark as deallocated
 * **R** = `realloc` a victim chosen randomly from the currently allocated objects to a randomly-chosen new size
 * **A** = `memalign` a randomly-sized object aligned to a randomly chosen power of two
 
