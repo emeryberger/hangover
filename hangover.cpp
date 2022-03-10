@@ -180,16 +180,29 @@ void simulateRealloc()
   assert(ptr != nullptr);
   assert(newSize != 0);
   auto newPtr = HANGOVER_REALLOC(ptr, newSize);
+  // We do not expect memory exhaustion during fuzzing, though it is of course legal!
+  assert(newPtr);
   // Check AND reset the known value.
   auto minSize = ((sz < newSize) ? sz : newSize);
-  auto v = ('M' + (uintptr_t) ptr) % 256;  
-  auto new_v = ('M' + (uintptr_t) newPtr) % 256;
   for (auto ind = 0; ind < minSize; ind++) {
+
+    // Populate the known value
+    // This has to be done in the same exact way that `simulateFree` will check
+    // for later. Otherwise, it will spuriously abort.
+    // Be very careful about the inferred type with `auto`. By default, C++ has
+    // the results of arithmetic operations be integers. But we only want to make
+    // sure the data is equal when treated as a (signed) character. The `% 256`
+    // isn't enough. Doing that with -128 gives +128 instead of its negative.
+    char v = ('M' + (uintptr_t) ptr) % 256;
+    char new_v = ('M' + (uintptr_t) newPtr) % 256;
+
     //printf("accessing ind %d\n", ind);
     assert(((char *) newPtr)[ind] == v);
     ((char *) newPtr)[ind] = new_v;
   }
   for (auto ind = minSize; ind < newSize; ind++) {
+    // Duplicate logic for computing `new_v` from the above for loop
+    char new_v = ('M' + (uintptr_t) newPtr) % 256;
     //	  printf("writing %d into ind %d\n", v, ind);
     ((char *) newPtr)[ind] = new_v;
   }
