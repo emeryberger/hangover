@@ -180,6 +180,8 @@ void simulateRealloc()
   assert(ptr != nullptr);
   assert(newSize != 0);
   auto newPtr = HANGOVER_REALLOC(ptr, newSize);
+  // We do not expect memory exhaustion during fuzzing, though it is of course legal!
+  assert(newPtr);
   // Check AND reset the known value.
   auto minSize = ((sz < newSize) ? sz : newSize);
   auto v = ('M' + (uintptr_t) ptr) % 256;  
