@@ -66,13 +66,13 @@ void markAllocated(void * ptr, size_t sz) {
     allocated_bytes[ind + (uintptr_t) ptr] = true;
   }
   allocs.push_back(ptr);
+
   // Fill with a known value.
-#if 0
+  // This has to be done in the same exact way that `simulateMalloc` will check
+  // for later. Otherwise, it will spuriously abort.
   for (auto ind = 0; ind < sz; ind++) {
     ((char *) ptr)[ind] = ('M' + ind + (uintptr_t) ptr) % 256;
   }
-#endif
-  memset(ptr, ((uintptr_t) ptr + 'M') % 256, sz);
 }
 
 void simulateMemalign() {
@@ -125,13 +125,21 @@ void simulateFree() {
   auto sz = sizes[ptr];
   printf("sz = %lu, malloc_usable_size = %lu\n", sz, HANGOVER_MALLOC_USABLE_SIZE(ptr));
   assert(HANGOVER_MALLOC_USABLE_SIZE(ptr) >= sz);
+
   // Check for the known value.
+  // This has to be done in the exactly same way `markAllocated` populates it.
+  // Otheriwse, it will spuriously abort.
+  // Be very careful about the inferred type with `auto`. By default, C++ has
+  // the results of arithmetic operations be integers. But we only want to make
+  // sure the data is equal when treated as a (signed) character. The `% 256`
+  // isn't enough. Doing that with -128 gives +128 instead of its negative.
   auto v = ('M' + (uintptr_t) ptr) % 256;
   for (auto ind = 0; ind < sz; ind++) {
-    //    auto v = ('M' + ind + (uintptr_t) ptr) % 256;
-    //    	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
+        char v = ('M' + ind + (uintptr_t) ptr) % 256;
+        	  printf("free checking to see if ind %d = %d (it's actually %d)\n", ind, v, ((char *) ptr)[ind]);
     assert(((char *) ptr)[ind] == v);
   }
+
   // Fill with garbage
   //  previously was inside loop:   ((char *) ptr)[ind] = rand() % 256;
   memset(ptr, rand() % 256, sz);
