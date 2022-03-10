@@ -68,7 +68,7 @@ void markAllocated(void * ptr, size_t sz) {
   allocs.push_back(ptr);
 
   // Fill with a known value.
-  // This has to be done in the same exact way that `simulateMalloc` will check
+  // This has to be done in the same exact way that `simulateFree` will check
   // for later. Otherwise, it will spuriously abort.
   for (auto ind = 0; ind < sz; ind++) {
     ((char *) ptr)[ind] = ('M' + ind + (uintptr_t) ptr) % 256;
