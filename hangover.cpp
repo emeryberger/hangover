@@ -192,8 +192,8 @@ void simulateRealloc()
   assert(newPtr);
   // Check AND reset the known value.
   auto minSize = ((sz < newSize) ? sz : newSize);
-  auto v = ('M' + (uintptr_t) ptr) % 256;  
-  auto new_v = ('M' + (uintptr_t) newPtr) % 256;
+  char v = ('M' + (uintptr_t) ptr) % 256; //changed auto to char (see comment in simulateMalloc)
+  char new_v = ('M' + (uintptr_t) newPtr) % 256; //changed auto to char (see comment in simulateMalloc)
   for (auto ind = 0; ind < minSize; ind++) {
     //printf("accessing ind %d\n", ind);
     assert(((char *) newPtr)[ind] == v);
